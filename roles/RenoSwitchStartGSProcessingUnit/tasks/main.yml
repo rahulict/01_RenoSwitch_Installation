@@ -1,0 +1,8 @@
+---
+- name: Waiting for 10 seconds for backlog processing
+  wait_for: timeout=10
+
+- name: Starting Gigaspace processing unit
+  shell: /tmp/GigaSpaceProcUnit.sh &
+  args:
+   chdir: "{{ GigaspaceDir }}/bin"

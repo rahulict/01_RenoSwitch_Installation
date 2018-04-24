@@ -1,0 +1,18 @@
+---
+- name: Generating Script to start processing unit
+  template:
+   src: GigaSpaceProcUnit.j2
+   dest: "{{ role_path }}/files/GigaSpaceProcUnit.sh"
+   owner: jenkins
+   group: jenkins
+   mode: '0700'
+  delegate_to: localhost
+
+- name: Copying above generated script to the destination server
+  copy:
+   src: "GigaSpaceProcUnit.sh"
+   dest: /tmp/GigaSpaceProcUnit.sh
+   owner: jenkins
+   group: jenkins
+   mode: '0700'
+   force: true

@@ -1,0 +1,44 @@
+---
+## cleaning package directories ##
+- name: "Clean {{ RenoSwitchUnzippedDir }} directory before extracting package in it"
+  file:
+   state: "{{ item }}"
+   path: "{{ RenoSwitchUnzippedDir }}/"
+   owner: jenkins
+   group: jenkins
+   mode: 0750
+  with_items:
+  - absent
+  - directory
+  when: result is changed
+
+- name: "Clean {{ SupportSoftUnzippedDir }} directory before extracting package in it"
+  file:
+   state: "{{ item }}"
+   path: "{{ SupportSoftUnzippedDir }}/"
+   owner: jenkins
+   group: jenkins
+   mode: 0750
+  with_items:
+  - absent
+  - directory
+  when: result1 is changed
+
+## Extracting package ##
+- name: Extracting Reno_Switch software
+  unarchive:
+   src: "{{ RenoSwitchDir }}/reno-switch-{{ RenoSwitchRelease }}.zip"
+   dest: "{{ RenoSwitchUnzippedDir }}/"
+   mode: 0750
+   owner: jenkins
+   group: jenkins
+  when: result is changed
+
+- name: Extracting supporting software
+  unarchive:
+   src: "{{ SupportSoftDir }}/RippsLinuxSW.zip"
+   dest: "{{ SupportSoftUnzippedDir }}/"
+   mode: 0750
+   owner: jenkins
+   group: jenkins
+  when: result1 is changed

@@ -1,0 +1,4 @@
+./gs.sh deploy /home/jenkins/Reno_DevOps_Tools/Ansible_Playbooks/01_Reno_Switch_Software_Installation/Softwares/RenoSwitch/Extracted/dist/gs-libs/config-spaces-pu-1.0.0.0.27.jar
+./gs.sh deploy /home/jenkins/Reno_DevOps_Tools/Ansible_Playbooks/01_Reno_Switch_Software_Installation/Softwares/RenoSwitch/Extracted/dist/gs-libs/txn-space-pu-1.0.0.0.27.jar
+./gs.sh deploy /home/jenkins/Reno_DevOps_Tools/Ansible_Playbooks/01_Reno_Switch_Software_Installation/Softwares/RenoSwitch/Extracted/dist/gs-libs/map-spaces-pu-1.0.0.0.27.jar
+./gs.sh deploy -properties file:/home/jenkins/Reno_DevOps_Tools/Ansible_Playbooks/01_Reno_Switch_Software_Installation/Softwares/RenoSwitch/Extracted/dist/gs-libs/pu.properties /home/jenkins/Reno_DevOps_Tools/Ansible_Playbooks/01_Reno_Switch_Software_Installation/Softwares/RenoSwitch/Extracted/dist/gs-libs/ripps-gs-pu-1.0.0.0.27.jar

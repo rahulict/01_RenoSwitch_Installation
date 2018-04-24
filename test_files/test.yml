@@ -1,0 +1,5 @@
+---
+ - hosts: localhost
+
+   tasks:
+   - file: state=absent path=/tmp/tmp123

@@ -1,0 +1,19 @@
+---
+- name: "Checking if GigaSpace agent is running or not. <<Maximum Wait time 10 Minutes>>"
+  shell: ./gs.sh list gsa | grep -i "total 0"
+  args:
+   chdir: "{{ GigaspaceDir }}/bin"
+  failed_when: false
+  changed_when: false
+  register: gsaOutput
+  until: gsaOutput.rc != 0
+  retries: 10
+  delay: 60
+
+- debug:
+   msg: "GigaSpace agent is running..."
+  when: gsaOutput.rc != 0
+
+- debug:
+   msg: "GigaSpace agent is not running, sleeping for 1 minute..."
+  when: gsaOutput.rc == 0

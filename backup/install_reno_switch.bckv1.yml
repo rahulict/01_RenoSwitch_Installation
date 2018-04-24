@@ -1,0 +1,103 @@
+---
+ - name: Playbook to start Reno_Switch software
+   hosts: localhost
+   gather_facts: false
+   vars:
+    PlaybookHomeDir: /home/jenkins/Reno_DevOps_Tools/Ansible_Playbooks/01_Reno_Switch_Software_Installation
+    SupportSoftDir: "{{ PlaybookHomeDir }}/Softwares/Supporting"
+    RenoSwitchDir: "{{ PlaybookHomeDir }}/Softwares/RenoSwitch"
+    GigaspaceDir: "{{ SupportSoftDir }}/RippsLinuxSW/gigaspaces-xap-enterprise-12.1.1-ga-b17100"
+    RenoSwitchRelease: "1.0.0.0.27"
+   
+   tasks:
+   - name: Installing required softwares, if not present
+     yum: name={{ item }} state=present update_cache=yes
+     with_items:
+     - unzip
+     become: true
+
+   - name: Creating necessary directories, if not present
+     file: state=directory mode=0775 owner=jenkins group=jenkins path={{ item }}
+     with_items:
+     - "{{ SupportSoftDir }}"
+     - "{{ RenoSwitchDir }}"
+
+   - name: Downloading Reno_Switch software from artifactory & Extrating it 
+     unarchive:
+      src: "http://172.16.23.28:8081/artifactory/dev-release/com/renovite/reno-switch/{{ RenoSwitchRelease }}/reno-switch-{{ RenoSwitchRelease }}.zip"
+      dest: "{{ RenoSwitchDir }}/"
+      remote_src: true
+      mode: 0750
+      owner: jenkins
+      group: jenkins
+
+   - name: Downloading supporting software from artifactory & Extrating it
+     unarchive:
+      src: http://172.16.23.28:8081/artifactory/Tools/RippsLinuxSW.zip
+      dest: "{{ SupportSoftDir }}/"
+      remote_src: true
+      mode: 0750
+      owner: jenkins
+      group: jenkins
+
+   - name: Checking if GigaSpace agent is running or not
+     shell: ./gs.sh list gsa | grep -i "total 0"
+     args:
+      chdir: "{{ GigaspaceDir }}/bin"
+     failed_when: false
+     changed_when: false
+     register: gsaOutput
+
+   #- debug: msg={{ gsaOutput.rc }}
+   - debug:
+      msg: "GigaSpace agent is running..."
+     when: gsaOutput.rc != 0
+
+   - debug:
+      msg: "GigaSpace agent is not running..."
+     when: gsaOutput.rc == 0
+
+   - name: Checking if GigaSpace processing unit is running or not
+     shell: ./gs.sh space list | grep -i "5 space instance"
+     args:
+      chdir: "{{ GigaspaceDir }}/bin"
+     failed_when: false
+     changed_when: false
+     register: gsOutput
+
+   #- debug: msg={{ gsOutput.rc }}
+   - debug:
+      msg: "GigaSpace processing unit is running..."
+     when: gsOutput.rc != 1
+
+   - debug:
+      msg: "GigaSpace processing unit is not running..."
+     when: gsOutput.rc == 1
+
+   - name: Starting Gigaspace agent
+     shell: ./gs-agent.sh &
+     args:
+      chdir: "{{ GigaspaceDir }}/bin"
+     when: gsaOutput.rc == 0
+      
+   - name: Generating Script to start processing unit
+     template:
+      src: roles/RenoSwitch/templates/GigaSpaceProcUnit.j2
+      dest: roles/RenoSwitch/scripts/GigaSpaceProcUnit.sh
+      owner: jenkins
+      group: jenkins
+      mode: '0700'
+
+   - name: Copy above generated script to the destination server
+     copy:
+      src: roles/RenoSwitch/scripts/GigaSpaceProcUnit.sh
+      dest: /tmp/GigaSpaceProcUnit.sh
+      owner: jenkins
+      group: jenkins
+      mode: '0700'
+
+   - name: Starting Gigaspace processing unit
+     shell: /tmp/GigaSpaceProcUnit.sh &
+     args:
+      chdir: "{{ GigaspaceDir }}/bin"
+     when: gsOutput.rc == 1

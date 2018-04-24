@@ -1,0 +1,200 @@
+---
+ - name: Playbook to start Reno_Switch software
+   hosts: localhost
+   gather_facts: false
+   vars:
+    PlaybookHomeDir: "/home/jenkins/Reno_DevOps_Tools/Ansible_Playbooks/01_Reno_Switch_Software_Installation"
+    SupportSoftDir: "{{ PlaybookHomeDir }}/Softwares/Supporting"
+    SupportSoftUnzippedDir: "{{ PlaybookHomeDir }}/Softwares/Supporting/Extracted"
+    RenoSwitchDir: "{{ PlaybookHomeDir }}/Softwares/RenoSwitch"
+    RenoSwitchUnzippedDir: "{{ PlaybookHomeDir }}/Softwares/RenoSwitch/Extracted"
+    GigaspaceDir: "{{ SupportSoftUnzippedDir }}/RippsLinuxSW/gigaspaces-xap-enterprise-12.1.1-ga-b17100"
+    Artifactory_URL: "http://172.16.23.28:8081/artifactory"
+    RenoSwitchRelease: "1.0.0.0.27"
+   
+   tasks:
+   - name: Installing required softwares, if not present
+     yum: name={{ item }} state=present update_cache=yes
+     with_items:
+     - unzip
+     become: true
+
+   - name: Creating necessary directories, if not present
+     file: state=directory mode=0775 owner=jenkins group=jenkins path={{ item }}
+     with_items:
+     - "{{ SupportSoftDir }}"
+     - "{{ RenoSwitchDir }}"
+
+   - name: Downloading Reno_Switch software from artifactory
+     get_url:
+      url: "{{ Artifactory_URL }}/dev-release/com/renovite/reno-switch/{{ RenoSwitchRelease }}/reno-switch-{{ RenoSwitchRelease }}.zip"
+      dest: "{{ RenoSwitchDir }}/"
+      owner: jenkins
+      group: jenkins
+      mode: 0750
+      timeout: 60
+     register: result
+
+   - name: Downloading supporting software from artifactory
+     get_url:
+      url: "{{ Artifactory_URL }}/Tools/RippsLinuxSW.zip"
+      dest: "{{ SupportSoftDir }}/"
+      owner: jenkins
+      group: jenkins
+      mode: 0750
+      timeout: 120
+     register: result1
+      
+   - name: Generating Script to start processing unit
+     template:
+      src: roles/RenoSwitch/templates/GigaSpaceProcUnit.j2
+      dest: roles/RenoSwitch/scripts/GigaSpaceProcUnit.sh
+      owner: jenkins
+      group: jenkins
+      mode: '0700'
+
+   - name: Copying above generated script to the destination server
+     copy:
+      src: roles/RenoSwitch/scripts/GigaSpaceProcUnit.sh
+      dest: /tmp/GigaSpaceProcUnit.sh
+      owner: jenkins
+      group: jenkins
+      mode: '0700'
+
+   - block:
+     ## Stop old running Reno_Switch & processing unit ##
+     - name: Finding process IDs of GigaSpace agent & processing unit
+       shell: psOutput=`/bin/ps -ef | /bin/grep java | /bin/grep 01_Reno_Switch_Software_Installation | /bin/grep -v grep | /bin/awk '{print $2}'` \
+              && echo $psOutput
+       register: psOutput
+       failed_when: false
+       
+     - name: Stopping currently running GigaSpace agent & processing unit
+       shell: kill -9 {{ psOutput.stdout }}
+       when: psOutput.stdout != ""
+       register: killOutput
+
+     - debug:
+        msg: "GigaSpace processes with PIDs '{{ psOutput.stdout }}' have been killed..."
+       when: killOutput.rc is defined
+
+     ## cleaning package directories ##
+     - name: "Clean {{ RenoSwitchUnzippedDir }} directory before extracting package in it"
+       file:
+        state: "{{ item }}"
+        path: "{{ RenoSwitchUnzippedDir }}/"
+        owner: jenkins
+        group: jenkins
+        mode: 0750
+       with_items:
+       - absent
+       - directory
+       when: result is changed
+     
+     - name: "Clean {{ SupportSoftUnzippedDir }} directory before extracting package in it"
+       file:
+        state: "{{ item }}"
+        path: "{{ SupportSoftUnzippedDir }}/"
+        owner: jenkins
+        group: jenkins
+        mode: 0750
+       with_items:
+       - absent
+       - directory
+       when: result1 is changed
+
+
+     ## Extracting package ##
+     - name: Extrating Reno_Switch software
+       unarchive:
+        src: "{{ RenoSwitchDir }}/reno-switch-{{ RenoSwitchRelease }}.zip"
+        dest: "{{ RenoSwitchUnzippedDir }}/"
+        mode: 0750
+        owner: jenkins
+        group: jenkins
+       when: result is changed
+
+     - name: Extracting supporting software
+       unarchive:
+        src: "{{ SupportSoftDir }}/RippsLinuxSW.zip"
+        dest: "{{ SupportSoftUnzippedDir }}/"
+        mode: 0750
+        owner: jenkins
+        group: jenkins
+       when: result1 is changed
+
+     - name: Starting Gigaspace agent
+       shell: ./gs-agent.sh &
+       args:
+        chdir: "{{ GigaspaceDir }}/bin"
+       #when: gsaOutput.rc == 0
+  
+     - name: Starting Gigaspace processing unit
+       shell: /tmp/GigaSpaceProcUnit.sh &
+       args:
+        chdir: "{{ GigaspaceDir }}/bin"
+       #when: gsOutput.rc == 1
+
+     - name: Waiting for 5 minutes for GigaSpace agent and processing units to fully come up
+       wait_for: timeout=300
+
+     when: result is changed or result1 is changed
+       
+   - name: Checking if GigaSpace agent is running or not
+     shell: ./gs.sh list gsa | grep -i "total 0"
+     args:
+      chdir: "{{ GigaspaceDir }}/bin"
+     failed_when: false
+     changed_when: false
+     register: gsaOutput
+
+   #- debug: msg={{ gsaOutput.rc }}
+   - debug:
+      msg: "GigaSpace agent is running..."
+     when: gsaOutput.rc != 0
+
+   - debug:
+      msg: "GigaSpace agent is not running..."
+     when: gsaOutput.rc == 0
+     changed_when: gsaOutput.rc == 0
+     notify: Start_GigaSpace_Agent
+
+   - name: Checking if GigaSpace processing unit is running or not
+     shell: ./gs.sh space list | grep -i "4 space instance"
+     args:
+      chdir: "{{ GigaspaceDir }}/bin"
+     failed_when: false
+     changed_when: false
+     register: gsOutput
+
+   #- debug: msg={{ gsOutput.rc }}
+   - debug:
+      msg: "GigaSpace processing unit is running..."
+     when: gsOutput.rc != 1
+
+   - debug:
+      msg: "GigaSpace processing unit is not running..."
+     when: gsOutput.rc == 1
+     changed_when: gsOutput.rc == 1
+     notify: Start_GigaSpace_Processing_Unit
+
+   - name: Cleaning temporary files
+     file: 
+      state: absent
+      path: "{{ item }}"
+     with_items:
+     - "{{ result.src }}"
+     - "{{ result1.src }}"
+
+   handlers:
+   - name: Start_GigaSpace_Agent
+     shell: ./gs-agent.sh &
+     args:
+      chdir: "{{ GigaspaceDir }}/bin"
+     when: gsaOutput.rc == 0
+
+   - name: Start_GigaSpace_Processing_Unit
+     shell: /tmp/GigaSpaceProcUnit.sh &
+     args:
+      chdir: "{{ GigaspaceDir }}/bin"
+     when: gsOutput.rc == 1

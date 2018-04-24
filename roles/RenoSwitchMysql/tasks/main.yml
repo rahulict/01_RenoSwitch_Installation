@@ -1,0 +1,39 @@
+---
+- name: Start mysql service if not already running
+  service: name=mysqld state=started enabled=true
+
+- name: Downloading SQL script from bitBucket
+  git:
+   repo: "{{ BitBucket_URL }}"
+   dest: "{{ SQLScriptDir }}/"
+
+- name: Creating shell script from template
+  template:
+   src: ExecuteSQL.j2
+   dest: "{{ role_path }}/files/ExecuteSQL.sh"
+   owner: jenkins
+   group: jenkins
+   mode: '0700'
+  delegate_to: localhost
+
+- name: Copying above generated script to the destination server
+  copy:
+   src: "ExecuteSQL.sh"
+   dest: /tmp/ExecuteSQL.sh
+   owner: jenkins
+   group: jenkins
+   mode: '0700'
+  
+- name: Running SQL scripts in mysql
+  shell: >
+    /tmp/ExecuteSQL.sh {{ item }}
+  check_mode: no
+  #changed_when: False
+  with_items: "{{ SQLs }}"
+  register: SQLresult
+  #failed_when: > 
+  # SQLresult.rc != 0 and 'ERROR 1146' not in SQLresult.stderr
+
+#- debug: msg={{ item }}
+  #with_items:
+  #- "{{ SQLresult.results }}"

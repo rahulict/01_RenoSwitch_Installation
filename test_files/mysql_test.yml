@@ -1,0 +1,21 @@
+---
+ - name: Mysql test Playbook
+   hosts: localhost
+   gather_facts: false
+   tasks:
+   - name: Retrieve stuff from mysql
+     shell: >
+       mysql --user=root --password=Reno@1234 < ./{{ item }}.sql
+     check_mode: no
+     changed_when: False
+     failed_when: false
+     with_items:
+     - tmp
+     - tmp1
+     register: result
+
+   - name: Fail if DB error
+     shell: echo "DB Error found"
+     changed_when: item.rc != 0 and 'ERROR 1096' not in item.stderr
+     failed_when: item.rc != 0 and 'ERROR' not in item.stderr
+     with_items: "{{result.results}}"

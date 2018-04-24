@@ -1,0 +1,20 @@
+---
+## Stop old running Reno_Switch & processing unit ##
+- name: Finding process IDs of GigaSpace agent & processing unit
+  shell: psOutput=`/bin/ps -ef | /bin/grep java | grep -i gigaspace | /bin/grep {{ playbook_dir }} | /bin/grep -v grep | /bin/awk '{print $2}'` \
+         && echo $psOutput `cat ripps-kernel.pid`
+  args:
+   chdir: "{{ RenoSwitchUnzippedDir }}/dist/ripps-re/bin"
+  register: psOutput
+  failed_when: false
+
+- name: Stopping currently running GigaSpace agent & processing unit
+  shell: kill -9 {{ psOutput.stdout }} && > ripps-kernel.pid
+  args:
+   chdir: "{{ RenoSwitchUnzippedDir }}/dist/ripps-re/bin"
+  when: psOutput.stdout != ""
+  register: killOutput
+
+- debug:
+   msg: "GigaSpace processes with PIDs '{{ psOutput.stdout }}' have been killed..."
+  when: killOutput.rc is defined

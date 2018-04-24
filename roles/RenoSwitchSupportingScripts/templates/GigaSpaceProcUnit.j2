@@ -1,0 +1,4 @@
+./gs.sh deploy {{ RenoSwitchUnzippedDir }}/dist/gs-libs/config-spaces-pu-{{ RenoSwitchRelease }}.jar
+./gs.sh deploy {{ RenoSwitchUnzippedDir }}/dist/gs-libs/txn-space-pu-{{ RenoSwitchRelease }}.jar
+./gs.sh deploy {{ RenoSwitchUnzippedDir }}/dist/gs-libs/map-spaces-pu-{{ RenoSwitchRelease }}.jar
+./gs.sh deploy -properties file:{{ RenoSwitchUnzippedDir }}/dist/gs-libs/pu.properties {{ RenoSwitchUnzippedDir }}/dist/gs-libs/ripps-gs-pu-{{ RenoSwitchRelease }}.jar

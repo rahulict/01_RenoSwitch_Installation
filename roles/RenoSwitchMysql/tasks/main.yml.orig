@@ -1,0 +1,13 @@
+---
+- name: Start mysql service if not already running
+  service: name=mysqld state=started enabled=true
+
+- name: Running SQL scripts in mysql
+  shell: >
+    mysql --user=root --password=Reno@1234 < {{SQLFilesLocation}}/{{ item }}
+  check_mode: no
+  changed_when: False
+  with_items: "{{ SQLs }}"
+  register: SQLresult
+  failed_when: > 
+   SQLresult.rc != 0 and 'ERROR 1146' not in SQLresult.stderr

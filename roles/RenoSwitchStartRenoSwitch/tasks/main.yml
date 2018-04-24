@@ -1,0 +1,8 @@
+---
+- name: Waiting for 10 seconds for backlog processing
+  wait_for: timeout=10
+
+- name: Starting RenoSwitch
+  shell: ./start-db.sh &
+  args:
+   chdir: "{{ RenoSwitchUnzippedDir }}/dist/ripps-re/bin"

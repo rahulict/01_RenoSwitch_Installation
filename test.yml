@@ -1,0 +1,23 @@
+---
+- name: Main Playbook
+  hosts: JenkinsServer2
+  gather_facts: false
+  vars:
+   SupportSoftDir: "{{ playbook_dir }}/Softwares/Supporting"
+   SupportSoftUnzippedDir: "{{ SupportSoftDir }}/Extracted"
+   RenoSwitchDir: "{{ playbook_dir }}/Softwares/RenoSwitch"
+   RenoSwitchUnzippedDir: "{{ RenoSwitchDir }}/Extracted"
+   GigaspaceDir: "{{ SupportSoftUnzippedDir }}/RippsLinuxSW/gigaspaces-xap-enterprise-12.1.1-ga-b17100"
+   Artifactory_URL: "http://172.16.23.28:8081/artifactory"
+   RenoSwitchRelease: "1.0.0.0.27"
+   SQLFilesLocation: "{{ RenoSwitchUnzippedDir }}/setup-configurations/db-scripts"
+   MySQLFlag: False
+   SQLs:
+   - ripps-master
+   - ripps-master-auditing
+   - mc_schema
+   - test-data
+
+  tasks:
+  - name: "Role: RenoSwitchStartConfigLoader"
+    include_role: name=RenoSwitchStartConfigLoader

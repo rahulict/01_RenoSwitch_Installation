@@ -1,0 +1,19 @@
+---
+- name: "Checking if GigaSpace processing unit is running or not. <<Maximum Wait time 10 Minutes>>"
+  shell: ./gs.sh space list | grep -i "5 space instance"
+  args:
+   chdir: "{{ GigaspaceDir }}/bin"
+  failed_when: false
+  changed_when: false
+  register: gsOutput
+  until: gsOutput.rc != 1
+  retries: 10
+  delay: 60
+
+- debug:
+   msg: "GigaSpace processing unit is running..."
+  when: gsOutput.rc != 1
+
+- debug:
+   msg: "GigaSpace processing unit is not running..."
+  when: gsOutput.rc == 1

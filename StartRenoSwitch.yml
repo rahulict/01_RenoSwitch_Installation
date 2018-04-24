@@ -1,0 +1,74 @@
+---
+- name: Main Playbook
+  hosts: JenkinsServer2
+  gather_facts: false
+  vars:
+   SupportSoftDir: "{{ playbook_dir }}/Softwares/Supporting"
+   SupportSoftUnzippedDir: "{{ SupportSoftDir }}/Extracted"
+   RenoSwitchDir: "{{ playbook_dir }}/Softwares/RenoSwitch"
+   RenoSwitchUnzippedDir: "{{ RenoSwitchDir }}/Extracted"
+   GigaspaceDir: "{{ SupportSoftUnzippedDir }}/RippsLinuxSW/gigaspaces-xap-enterprise-12.1.1-ga-b17100"
+   SQLScriptDir: "{{ playbook_dir }}/Softwares/SQLScriptDir"
+   Artifactory_URL: "http://172.16.23.28:8081/artifactory"
+   BitBucket_URL: "git@bitbucket.org:renoprod/reno-switch-db-scripts.git"
+   RenoSwitchRelease: "1.0.0.0.27"
+   MySQLFlag: False
+   GigaSpaceKillFLag: False
+   SQLs:
+   - ripps-master
+   - ripps-master-auditing
+   - mc_schema
+   - test-data
+
+  tasks:
+  - name: "Role: RenoSwitchCreateDirectories"
+    include_role: name=RenoSwitchCreateDirectories
+
+  - name: "Role: RenoSwitchMysql << MySQLFlag == {{ MySQLFlag }} (Task runs, if it is set as 'True') >>"
+    include_role: name=RenoSwitchMysql
+    when: MySQLFlag|upper == "TRUE"
+
+  - name: "Role: RenoSwitchInstallDependencies"
+    include_role: name=RenoSwitchInstallDependencies
+
+  - name: "Role: RenoSwitchDownloadPackage"
+    include_role: name=RenoSwitchDownloadPackage
+
+  - name: "Role: RenoSwitchSupportingScripts"
+    include_role: name=RenoSwitchSupportingScripts
+
+  - block:
+    - name: "Role: RenoSwitchKillProcesses"
+      include_role: name=RenoSwitchKillProcesses
+    - name: "Role: RenoSwitchCleanDirExtractPKG"
+      include_role: name=RenoSwitchCleanDirExtractPKG
+    - name: "Role: RenoSwitchStartGSAgent"
+      include_role: name=RenoSwitchStartGSAgent
+    - name: "Role: RenoSwitchCheckGSAgent"
+      include_role: name=RenoSwitchCheckGSAgent
+    - name: "Role: RenoSwitchStartGSProcessingUnit"
+      include_role: name=RenoSwitchStartGSProcessingUnit
+    - name: "Role: RenoSwitchCheckGSProcessingUnit"
+      include_role: name=RenoSwitchCheckGSProcessingUnit
+    - name: "Role: RenoSwitchStartConfigLoader"
+      include_role: name=RenoSwitchStartConfigLoader
+    - name: "Role: RenoSwitchStartRenoSwitch"
+      include_role: name=RenoSwitchStartRenoSwitch
+    when: result is changed or result1 is changed
+
+  - block:
+    - name: "Role: RenoSwitchKillProcesses << GigaSpaceKillFLag == {{ GigaSpaceKillFLag }} (Task runs, if it is set as 'True') >>"
+      include_role: name=RenoSwitchKillProcesses
+    - name: "Role: RenoSwitchStartGSAgent << GigaSpaceKillFLag == {{ GigaSpaceKillFLag }} (Task runs, if it is set as 'True') >>"
+      include_role: name=RenoSwitchStartGSAgent
+    - name: "Role: RenoSwitchCheckGSAgent << GigaSpaceKillFLag == {{ GigaSpaceKillFLag }} (Task runs, if it is set as 'True') >>"
+      include_role: name=RenoSwitchCheckGSAgent
+    - name: "Role: RenoSwitchStartGSProcessingUnit << GigaSpaceKillFLag == {{ GigaSpaceKillFLag }} (Task runs, if it is set as 'True') >>"
+      include_role: name=RenoSwitchStartGSProcessingUnit
+    - name: "Role: RenoSwitchCheckGSProcessingUnit << GigaSpaceKillFLag == {{ GigaSpaceKillFLag }} (Task runs, if it is set as 'True') >>"
+      include_role: name=RenoSwitchCheckGSProcessingUnit
+    - name: "Role: RenoSwitchStartConfigLoader << GigaSpaceKillFLag == {{ GigaSpaceKillFLag }} (Task runs, if it is set as 'True') >>"
+      include_role: name=RenoSwitchStartConfigLoader
+    - name: "Role: RenoSwitchStartRenoSwitch << GigaSpaceKillFLag == {{ GigaSpaceKillFLag }} (Task runs, if it is set as 'True') >>"
+      include_role: name=RenoSwitchStartRenoSwitch
+    when: GigaSpaceKillFLag|upper == "TRUE" and result is not changed and result1 is not changed

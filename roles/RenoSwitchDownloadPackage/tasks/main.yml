@@ -1,0 +1,29 @@
+---
+- name: Downloading Reno_Switch software from artifactory
+  get_url:
+   url: "{{ Artifactory_URL }}/dev-release/com/renovite/reno-switch/{{ RenoSwitchRelease }}/reno-switch-{{ RenoSwitchRelease }}.zip"
+   dest: "{{ RenoSwitchDir }}/"
+   owner: jenkins
+   group: jenkins
+   mode: 0750
+   timeout: 60
+  register: result
+
+- name: Downloading supporting software from artifactory
+  get_url:
+   url: "{{ Artifactory_URL }}/Tools/RippsLinuxSW.zip"
+   dest: "{{ SupportSoftDir }}/"
+   owner: jenkins
+   group: jenkins
+   mode: 0750
+   timeout: 120
+  register: result1
+
+- name: Cleaning temporary files
+  file:
+   state: absent
+   path: "{{ item }}"
+  with_items:
+  - "{{ result.src }}"
+  - "{{ result1.src }}"
+  changed_when: false
