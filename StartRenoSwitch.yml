@@ -1,5 +1,5 @@
 ---
-- name: Main Playbook
+- name: RenoSwitch installation Playbook
   hosts: JenkinsServer2
   gather_facts: false
   vars:

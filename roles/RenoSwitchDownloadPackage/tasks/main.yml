@@ -17,6 +17,7 @@
    group: jenkins
    mode: 0750
    timeout: 120
+   force: true
   register: result1
 
 - name: Cleaning temporary files
